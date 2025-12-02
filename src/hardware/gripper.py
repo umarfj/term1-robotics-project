@@ -17,7 +17,6 @@ class Gripper(ABC):
         self.urdf_path = None
         self.manual_offset = [0, 0, 0, 1] 
         self.tool_tip_offset = 0.0 
-        self.vertical_bias = 1
     
     @abstractmethod
     def open(self):
@@ -64,9 +63,6 @@ class Gripper(ABC):
             rot_mat = p.getMatrixFromQuaternion(orientation)
             z_axis = np.array([rot_mat[2], rot_mat[5], rot_mat[8]])
             final_pos = np.array(position) - (z_axis * self.tool_tip_offset)
-            
-            # Apply Vertical Bias (World Z)
-            final_pos[2] -= self.vertical_bias
 
             # 3. Move using constraint OR teleport
             if self.constraint_id is not None:
@@ -166,8 +162,8 @@ class ThreeFinger(Gripper):
         project_root = os.path.dirname(os.path.dirname(current_dir))
         self.urdf_path = os.path.join(project_root, "assets", "gripper_files", "threeFingers", "sdh.urdf")
         
-        self.manual_offset = p.getQuaternionFromEuler([0, -1.57, 0]) 
-        self.tool_tip_offset = 0  # ADJUSTED: Reduced from 0.22 to fix offset issue
+        self.manual_offset = p.getQuaternionFromEuler([0,0, 3.14159]) 
+        self.tool_tip_offset = 0 # ADJUSTED: Reduced from 0.22 to fix offset issue
         
         self._load_gripper()
     
@@ -205,11 +201,27 @@ class ThreeFinger(Gripper):
             num_joints = p.getNumJoints(self.body_id, physicsClientId=self.physics_client)
             for joint_index in range(num_joints):
                 info = p.getJointInfo(self.body_id, joint_index, physicsClientId=self.physics_client)
+                joint_name = info[1].decode('utf-8')
+                
                 if info[2] in [p.JOINT_REVOLUTE, p.JOINT_PRISMATIC]:
+                    # Determine target position based on joint type
+                    target_pos = 0.0
+                    
+                    # Flexion joints (fingers closing)
+                    # Matches: finger_12, finger_13, finger_22, finger_23, thumb_2, thumb_3
+                    if any(x in joint_name for x in ["12_joint", "13_joint", "22_joint", "23_joint", "thumb_2_joint", "thumb_3_joint"]):
+                        target_pos = 1.0
+                    
+                    # Knuckle/Spread joints (keep straight)
+                    # Matches: knuckle_joint, finger_21_joint
+                    elif any(x in joint_name for x in ["knuckle_joint", "21_joint"]):
+                        target_pos = 0.0
+
                     p.setJointMotorControl2(
                         self.body_id, joint_index, p.POSITION_CONTROL,
-                        targetPosition=1.0, 
+                        targetPosition=target_pos, 
                         force=300.0,      # INCREASED: Professor uses 300-400
                         maxVelocity=1.0,  # Moderate speed
                         physicsClientId=self.physics_client
                     )
+
