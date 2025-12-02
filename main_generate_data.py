@@ -9,7 +9,7 @@ sys.path.append(os.getcwd())
 
 from src.simulation.sim_manager import SimulationManager
 from src.hardware.objects import Cube, Duck
-from src.hardware.gripper import TwoFinger, ThreeFinger
+from src.hardware.gripper import TwoFinger, ThreeFinger, FrankaPanda
 from src.planning.sampler import GraspSampler
 
 # --- CONFIGURATION ---
@@ -45,14 +45,17 @@ def main():
             current_obj = Duck(start_pos=[0, 0, 0.1])
             obj_name = "Duck"
             
-        # if np.random.rand() > 0.5:
-        #     current_gripper = TwoFinger(sim.client_id)
-        #     grip_name = "TwoFinger"
-        # else:
-        #     current_gripper = ThreeFinger(sim.client_id)
-        #     grip_name = "ThreeFinger"
-        current_gripper = ThreeFinger(sim.client_id)
-        grip_name = "ThreeFinger"
+        # Let object settle
+        sim.run_simulation(1.0)
+            
+        if np.random.rand() > 0.5:
+            current_gripper = TwoFinger(sim.client_id)
+            grip_name = "TwoFinger"
+        else:
+            current_gripper = FrankaPanda(sim.client_id)
+            grip_name = "FrankaPanda"
+        # current_gripper = FrankaPanda(sim.client_id)
+        # grip_name = "FrankaPanda"
         print(f"Target: {obj_name} | Gripper: {grip_name}")
 
         target_pos = current_obj.get_position()

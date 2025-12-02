@@ -8,6 +8,7 @@ import pybullet as p
 import pybullet_data
 import os
 import numpy as np
+import math
 
 class Gripper(ABC):
     def __init__(self, physics_client):
@@ -224,4 +225,105 @@ class ThreeFinger(Gripper):
                         maxVelocity=1.0,  # Moderate speed
                         physicsClientId=self.physics_client
                     )
+
+
+class FrankaPanda(Gripper):
+    def __init__(self, physics_client):
+        super().__init__(physics_client)
+        self.urdf_path = os.path.join(pybullet_data.getDataPath(), "franka_panda/panda.urdf")
+        self.num_dofs = 7
+        self.end_effector_index = 11
+        self.tool_tip_offset = -0.11 # Move 11cm forward to reach object center (compensates for sampler radius)
+        
+        # IK parameters
+        self.ll = [-7] * self.num_dofs
+        self.ul = [7] * self.num_dofs
+        self.jr = [7] * self.num_dofs
+        self.rp = [0.98, 0.458, 0.31, -2.24, -0.30, 2.66, 2.32, 0.02, 0.02]
+        
+        self._load_gripper()
+
+    def _load_gripper(self):
+        # Load robot at offset position to reach workspace (0,0,0)
+        # Placing base at (-0.5, 0, 0)
+        self.body_id = p.loadURDF(
+            self.urdf_path,
+            basePosition=[-0.5, 0, 0],
+            useFixedBase=True,
+            physicsClientId=self.physics_client
+        )
+        
+        # Reset to rest pose
+        index = 0
+        for j in range(p.getNumJoints(self.body_id, physicsClientId=self.physics_client)):
+            p.changeDynamics(self.body_id, j, linearDamping=0, angularDamping=0, physicsClientId=self.physics_client)
+            info = p.getJointInfo(self.body_id, j, physicsClientId=self.physics_client)
+            jointType = info[2]
+            if jointType in [p.JOINT_PRISMATIC, p.JOINT_REVOLUTE]:
+                if index < len(self.rp):
+                    p.resetJointState(self.body_id, j, self.rp[index], physicsClientId=self.physics_client)
+                    index += 1
+
+    def attach_to_world(self, offset=[0, 0, 0]):
+        # Franka Panda is fixed base, no constraint needed
+        pass
+
+    def move_to(self, position, orientation):
+        if self.body_id is not None:
+            # Apply TCP Offset
+            rot_mat = p.getMatrixFromQuaternion(orientation)
+            z_axis = np.array([rot_mat[2], rot_mat[5], rot_mat[8]])
+            
+            # Adjust position based on tool_tip_offset
+            final_pos = np.array(position) - (z_axis * self.tool_tip_offset)
+
+            jointPoses = p.calculateInverseKinematics(
+                self.body_id,
+                self.end_effector_index,
+                final_pos,
+                orientation,
+                self.ll,
+                self.ul,
+                self.jr,
+                self.rp,
+                maxNumIterations=20,
+                physicsClientId=self.physics_client
+            )
+            
+            # Apply joint positions (first 7 joints)
+            for i in range(self.num_dofs):
+                p.setJointMotorControl2(
+                    self.body_id, 
+                    i, 
+                    p.POSITION_CONTROL, 
+                    jointPoses[i], 
+                    force=5 * 240.,
+                    physicsClientId=self.physics_client
+                )
+
+    def open(self):
+        if self.body_id is not None:
+            # Fingers are indices 9 and 10
+            for i in [9, 10]:
+                p.setJointMotorControl2(
+                    self.body_id, 
+                    i, 
+                    p.POSITION_CONTROL, 
+                    0.04, # Open limit
+                    force=100,
+                    physicsClientId=self.physics_client
+                )
+
+    def close(self):
+        if self.body_id is not None:
+            # Fingers are indices 9 and 10
+            for i in [9, 10]:
+                p.setJointMotorControl2(
+                    self.body_id, 
+                    i, 
+                    p.POSITION_CONTROL, 
+                    0.0, # Closed
+                    force=100,
+                    physicsClientId=self.physics_client
+                )
 

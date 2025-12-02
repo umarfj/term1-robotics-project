@@ -7,8 +7,9 @@ class GraspSampler:
             np.random.seed(rng_seed)
 
     def sample_grasp_pose(self, target_pos, radius):
+        # Restrict to upper hemisphere for table-top picking
         phi = np.random.uniform(0, 2 * np.pi)
-        theta = np.random.uniform(0, np.pi / 2) 
+        theta = np.random.uniform(0, np.pi / 3) # 0 to 60 degrees from vertical (top-down bias)
 
         x_offset = radius * np.sin(theta) * np.cos(phi)
         y_offset = radius * np.sin(theta) * np.sin(phi)
@@ -17,7 +18,7 @@ class GraspSampler:
         grasp_pos = [
             target_pos[0] + x_offset,
             target_pos[1] + y_offset,
-            target_pos[2] + z_offset # Slightly below to account for gripper approach
+            target_pos[2] + z_offset 
         ]
 
         direction = np.array(target_pos) - np.array(grasp_pos)
@@ -27,7 +28,13 @@ class GraspSampler:
         xy_dist = np.sqrt(direction[0]**2 + direction[1]**2)
         pitch = np.arctan2(xy_dist, direction[2])
         
-        grasp_orn = p.getQuaternionFromEuler([0, pitch, yaw]) 
+        # Base orientation pointing towards object
+        base_orn = p.getQuaternionFromEuler([0, pitch, yaw])
+        
+        # Random rotation around the approach vector (Z-axis of gripper)
+        # This allows the fingers to be oriented differently
+        roll = np.random.uniform(0, np.pi)
+        grasp_orn = p.multiplyTransforms([0,0,0], base_orn, [0,0,0], p.getQuaternionFromEuler([0, 0, roll]))[1]
 
         return grasp_pos, grasp_orn
 
