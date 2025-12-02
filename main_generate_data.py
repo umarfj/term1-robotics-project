@@ -51,8 +51,8 @@ def main():
         # else:
         #     current_gripper = ThreeFinger(sim.client_id)
         #     grip_name = "ThreeFinger"
-        current_gripper = TwoFinger(sim.client_id)
-        grip_name = "TwoFinger"
+        current_gripper = ThreeFinger(sim.client_id)
+        grip_name = "ThreeFinger"
         print(f"Target: {obj_name} | Gripper: {grip_name}")
 
         target_pos = current_obj.get_position()

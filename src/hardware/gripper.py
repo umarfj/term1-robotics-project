@@ -17,6 +17,7 @@ class Gripper(ABC):
         self.urdf_path = None
         self.manual_offset = [0, 0, 0, 1] 
         self.tool_tip_offset = 0.0 
+        self.vertical_bias = 1
     
     @abstractmethod
     def open(self):
@@ -63,6 +64,9 @@ class Gripper(ABC):
             rot_mat = p.getMatrixFromQuaternion(orientation)
             z_axis = np.array([rot_mat[2], rot_mat[5], rot_mat[8]])
             final_pos = np.array(position) - (z_axis * self.tool_tip_offset)
+            
+            # Apply Vertical Bias (World Z)
+            final_pos[2] -= self.vertical_bias
 
             # 3. Move using constraint OR teleport
             if self.constraint_id is not None:
@@ -117,7 +121,7 @@ class TwoFinger(Gripper):
         self.urdf_path = os.path.join(pybullet_data.getDataPath(), "pr2_gripper.urdf")
         self.manual_offset = p.getQuaternionFromEuler([0, -1.57, 0])
         self.tool_tip_offset = 0.20  # Measured via measure_tip_offset.py
-        self.vertical_bias = 0.02    # Drop 2cm in world -Z to ensure contact
+        self.vertical_bias = 0.08    # Drop 2cm in world -Z to ensure contact
         self._load_gripper()
     
     def _load_gripper(self):
@@ -163,7 +167,7 @@ class ThreeFinger(Gripper):
         self.urdf_path = os.path.join(project_root, "assets", "gripper_files", "threeFingers", "sdh.urdf")
         
         self.manual_offset = p.getQuaternionFromEuler([0, -1.57, 0]) 
-        self.tool_tip_offset = 0.15  # ADJUSTED: Reduced from 0.22 to fix offset issue
+        self.tool_tip_offset = 0  # ADJUSTED: Reduced from 0.22 to fix offset issue
         
         self._load_gripper()
     
@@ -191,7 +195,7 @@ class ThreeFinger(Gripper):
                     p.setJointMotorControl2(
                         self.body_id, joint_index, p.POSITION_CONTROL,
                         targetPosition=0.0,
-                        force=10,
+                        force=20,
                         physicsClientId=self.physics_client
                     )
     
