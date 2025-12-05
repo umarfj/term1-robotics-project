@@ -33,7 +33,7 @@ class GraspSampler:
         
         # Random rotation around the approach vector (Z-axis of gripper)
         # This allows the fingers to be oriented differently
-        roll = np.random.uniform(0, np.pi)
+        roll = 0.0
         grasp_orn = p.multiplyTransforms([0,0,0], base_orn, [0,0,0], p.getQuaternionFromEuler([0, 0, roll]))[1]
 
         return grasp_pos, grasp_orn

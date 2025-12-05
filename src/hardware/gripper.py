@@ -117,7 +117,7 @@ class TwoFinger(Gripper):
         super().__init__(physics_client)
         self.urdf_path = os.path.join(pybullet_data.getDataPath(), "pr2_gripper.urdf")
         self.manual_offset = p.getQuaternionFromEuler([0, -1.57, 0])
-        self.tool_tip_offset = 0.20  # Measured via measure_tip_offset.py
+        self.tool_tip_offset = 0.205  # Measured via measure_tip_offset.py
         self.vertical_bias = 0.08    # Drop 2cm in world -Z to ensure contact
         self._load_gripper()
     
