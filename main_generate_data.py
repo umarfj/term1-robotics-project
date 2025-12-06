@@ -4,7 +4,7 @@ import numpy as np
 import time
 import os
 import sys
-
+  
 sys.path.append(os.getcwd())
 
 from src.simulation.sim_manager import SimulationManager
@@ -13,8 +13,8 @@ from src.hardware.gripper import TwoFinger, ThreeFinger, FrankaPanda
 from src.planning.sampler import GraspSampler
 
 # --- CONFIGURATION ---
-NUM_SAMPLES = 10        # 10 for dry-run
-GUI_MODE = True
+NUM_SAMPLES = 3000      # 10 for dry-run
+GUI_MODE = False
 DATA_DIR = "data"
 FILENAME = "grasp_dataset.csv"
 
@@ -44,7 +44,7 @@ def main():
         else:
             current_obj = Duck(start_pos=[0, 0, 0.1])
             obj_name = "Duck"
-            
+        
         # Let object settle
         sim.run_simulation(1.0)
             
@@ -54,6 +54,7 @@ def main():
         else:
             current_gripper = FrankaPanda(sim.client_id)
             grip_name = "FrankaPanda"
+        
         # current_gripper = FrankaPanda(sim.client_id)
         # grip_name = "FrankaPanda"
         print(f"Target: {obj_name} | Gripper: {grip_name}")

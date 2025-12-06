@@ -233,7 +233,9 @@ class FrankaPanda(Gripper):
         self.urdf_path = os.path.join(pybullet_data.getDataPath(), "franka_panda/panda.urdf")
         self.num_dofs = 7
         self.end_effector_index = 11
-        self.tool_tip_offset = -0.11 # Move 11cm forward to reach object center (compensates for sampler radius)
+        # Tool-tip offset in local gripper frame (X,Y,Z), tweakable by user
+        # Default keeps previous behavior: forward along local Z
+        self.tool_tip_offset_xyz = np.array([-0.01, 0, -0.105], dtype=float)
         
         # IK parameters
         self.ll = [-7] * self.num_dofs
@@ -248,7 +250,7 @@ class FrankaPanda(Gripper):
         # Placing base at (-0.5, 0, 0)
         self.body_id = p.loadURDF(
             self.urdf_path,
-            basePosition=[-0.5, 0, 0],
+            basePosition=[-0.6, 0, 0],
             useFixedBase=True,
             physicsClientId=self.physics_client
         )
@@ -268,16 +270,56 @@ class FrankaPanda(Gripper):
         # Franka Panda is fixed base, no constraint needed
         pass
 
+    def set_tcp_offset(self, dx=0.0, dy=0.0, dz=0.0):
+        """Set the tool center point offset in the local gripper frame (meters)."""
+        self.tool_tip_offset_xyz = np.array([dx, dy, dz], dtype=float)
+
     def move_to(self, position, orientation):
         if self.body_id is not None:
             # Apply TCP Offset
             rot_mat = p.getMatrixFromQuaternion(orientation)
+            # Local axes of the gripper frame
+            x_axis = np.array([rot_mat[0], rot_mat[3], rot_mat[6]])
+            y_axis = np.array([rot_mat[1], rot_mat[4], rot_mat[7]])
             z_axis = np.array([rot_mat[2], rot_mat[5], rot_mat[8]])
-            
-            # Adjust position based on tool_tip_offset
-            final_pos = np.array(position) - (z_axis * self.tool_tip_offset)
 
-            jointPoses = p.calculateInverseKinematics(
+            # Adjust position based on vector TCP offset (in local frame)
+            tcp_world_offset = (
+                x_axis * self.tool_tip_offset_xyz[0]
+                + y_axis * self.tool_tip_offset_xyz[1]
+                + z_axis * self.tool_tip_offset_xyz[2]
+            )
+            final_pos = np.array(position) - tcp_world_offset
+
+            
+
+            # Simple top-down staging: hover above target, then descend
+            hover_height = 0
+            hover_pos = final_pos.copy()
+            hover_pos[2] = final_pos[2] + hover_height
+
+            # Stage 1: move to hover
+            hover_joint_poses = p.calculateInverseKinematics(
+                self.body_id,
+                self.end_effector_index,
+                hover_pos,
+                orientation,
+                self.ll,
+                self.ul,
+                self.jr,
+                self.rp,
+                maxNumIterations=20,
+                physicsClientId=self.physics_client
+            )
+            for i in range(self.num_dofs):
+                p.setJointMotorControl2(
+                    self.body_id, i, p.POSITION_CONTROL,
+                    hover_joint_poses[i], force=5 * 240.,
+                    physicsClientId=self.physics_client
+                )
+
+            # Stage 2: descend to final
+            final_joint_poses = p.calculateInverseKinematics(
                 self.body_id,
                 self.end_effector_index,
                 final_pos,
@@ -289,15 +331,10 @@ class FrankaPanda(Gripper):
                 maxNumIterations=20,
                 physicsClientId=self.physics_client
             )
-            
-            # Apply joint positions (first 7 joints)
             for i in range(self.num_dofs):
                 p.setJointMotorControl2(
-                    self.body_id, 
-                    i, 
-                    p.POSITION_CONTROL, 
-                    jointPoses[i], 
-                    force=5 * 240.,
+                    self.body_id, i, p.POSITION_CONTROL,
+                    final_joint_poses[i], force=5 * 240.,
                     physicsClientId=self.physics_client
                 )
 
