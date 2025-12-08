@@ -15,8 +15,8 @@ from src.hardware.gripper import TwoFinger, FrankaPanda, ThreeFinger
 from src.planning.sampler import GraspSampler
 
 # --- CONFIGURATION ---
-MODEL_PATH = "best_grasp_classifier_svm.pkl" # The file you just trained
-NUM_TESTS = 200  # Coursework requires "at least ten" 
+MODEL_PATH = "best_grasp_classifier_rf_30k.pkl" # The file you just trained
+NUM_TESTS = 500  # Coursework requires "at least ten" 
 GUI_MODE = False # Must be True to see the robot move
 
 def main():

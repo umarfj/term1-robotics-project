@@ -13,7 +13,7 @@ from src.hardware.gripper import TwoFinger, ThreeFinger, FrankaPanda
 from src.planning.sampler import GraspSampler
 
 # --- CONFIGURATION ---
-NUM_SAMPLES = 3000      # 10 for dry-run
+NUM_SAMPLES = 30000      # 10 for dry-run
 GUI_MODE = False
 DATA_DIR = "data"
 FILENAME = "grasp_dataset.csv"
