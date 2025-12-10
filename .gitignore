@@ -18,6 +18,7 @@ ENV/
 # Uncomment if you don't want to commit datasets
 # data/*.csv
 # *.csv
+data/grasp_dataset_test.csv
 
 # LaTeX auxiliary files
 *.aux
