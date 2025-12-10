@@ -1,55 +1,7 @@
-import pybullet as p
-import pybullet_data
-import time
-import sys
-import os
+numpy>=1.21.0
+pandas>=1.3.0
+scikit-learn>=1.0.0
+pybullet>=3.2.0
+joblib>=1.1.0
+matplotlib>=3.3.0
 
-# Ensure Python can see the 'src' folder
-sys.path.append(os.getcwd())
-
-try:
-    from src.hardware.objects import Duck, Cube
-except ImportError as e:
-    print("\n[ERROR] Could not import 'src.hardware.objects'.")
-    print("Make sure this script is in the root folder (above 'src').")
-    print(f"Error details: {e}")
-    sys.exit()
-
-def main():
-    # 1. Connect to GUI
-    print("Connecting to PyBullet...")
-    p.connect(p.GUI)
-    
-    # 2. Setup Environment (Gravity + Plane)
-    p.setAdditionalSearchPath(pybullet_data.getDataPath())
-    p.setGravity(0, 0, -9.8)
-    p.loadURDF("plane.urdf")
-    
-    # 3. Load the Duck
-    print("Attempting to load Duck...")
-    try:
-        # Spawn duck slightly in the air so it drops
-        my_duck = Duck(start_pos=[0, 0, 0.2]) 
-        print(">> Success! Duck loaded.")
-    except Exception as e:
-        print(f"[ERROR] Failed to load Duck: {e}")
-
-    # 4. Load the Cube (Bonus check)
-    print("Attempting to load Cube...")
-    try:
-        # Spawn cube slightly to the side
-        my_cube = Cube(start_pos=[0.2, 0, 0.2])
-        print(">> Success! Cube loaded.")
-    except Exception as e:
-        print(f"[ERROR] Failed to load Cube: {e}")
-
-    # 5. Keep Window Open
-    print("\nSimulation running. Press Ctrl+C to exit.")
-    p.resetDebugVisualizerCamera(cameraDistance=1.0, cameraYaw=45, cameraPitch=-30, cameraTargetPosition=[0,0,0])
-    
-    while p.isConnected():
-        p.stepSimulation()
-        time.sleep(1./240.)
-
-if __name__ == "__main__":
-    main()

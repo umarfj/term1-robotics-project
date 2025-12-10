@@ -24,7 +24,11 @@ MODELS_DIR = os.path.join(os.path.dirname(__file__), "")  # src/learning
 
 
 class BaseClassifier(ABC):
-    """Abstract base classifier with a common interface."""
+    """Abstract base classifier with a common interface.
+    
+    Attributes:
+        model: The underlying ML model/pipeline (scikit-learn compatible).
+    """
 
     def __init__(self):
         self.model: Optional[Any] = None
@@ -35,16 +39,38 @@ class BaseClassifier(ABC):
         pass
 
     def train(self, X: np.ndarray, y: np.ndarray):
+        """Train the classifier on features and labels.
+        
+        Args:
+            X: Feature matrix of shape (n_samples, n_features).
+            y: Label vector of shape (n_samples,).
+        """
         if self.model is None:
             self.build()
         self.model.fit(X, y)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict class labels for samples.
+        
+        Args:
+            X: Feature matrix of shape (n_samples, n_features).
+            
+        Returns:
+            Predicted class labels of shape (n_samples,).
+        """
         if self.model is None:
             raise RuntimeError("Model not built or loaded.")
         return self.model.predict(X)
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        """Predict class probabilities for samples.
+        
+        Args:
+            X: Feature matrix of shape (n_samples, n_features).
+            
+        Returns:
+            Class probability estimates of shape (n_samples, n_classes).
+        """
         if self.model is None:
             raise RuntimeError("Model not built or loaded.")
         # Not all models support predict_proba
@@ -53,12 +79,26 @@ class BaseClassifier(ABC):
         raise AttributeError("This model does not support predict_proba.")
 
     def evaluate(self, X_test: np.ndarray, y_test: np.ndarray) -> Dict[str, Any]:
+        """Evaluate model on test set.
+        
+        Args:
+            X_test: Test feature matrix.
+            y_test: True test labels.
+            
+        Returns:
+            Dictionary with 'accuracy', 'classification_report', and 'predictions'.
+        """
         preds = self.predict(X_test)
         acc = accuracy_score(y_test, preds)
         report = classification_report(y_test, preds)
         return {"accuracy": acc, "classification_report": report, "predictions": preds}
 
     def save(self, filename: str):
+        """Save model to disk using pickle.
+        
+        Args:
+            filename: Output filename (saved to src/learning/ if not absolute path).
+        """
         if self.model is None:
             raise RuntimeError("No model to save.")
         path = filename if os.path.isabs(filename) else os.path.join(MODELS_DIR, filename)
@@ -66,15 +106,37 @@ class BaseClassifier(ABC):
             pickle.dump(self.model, f)
 
     def load(self, filename: str):
+        """Load model from disk.
+        
+        Args:
+            filename: Model filename (resolved from src/learning/ if not absolute).
+        """
         path = filename if os.path.isabs(filename) else os.path.join(MODELS_DIR, filename)
         with open(path, "rb") as f:
             self.model = pickle.load(f)
 
 
 class SVMClassifier(BaseClassifier):
-    """SVM classifier wrapped in a scaler+SVC pipeline."""
+    """SVM classifier wrapped in a scaler+SVC pipeline.
+    
+    Attributes:
+        probability: Enable probability estimates.
+        C: Regularization parameter.
+        gamma: Kernel coefficient ('scale', 'auto', or float).
+        kernel: Kernel type ('rbf', 'linear', 'poly', 'sigmoid').
+        cache_size: Kernel cache size in MB.
+    """
 
     def __init__(self, probability: bool = True, C: float = 1.0, gamma: str | float = "scale", kernel: str = "rbf", cache_size: int = 200):
+        """Initialize SVM classifier with hyperparameters.
+        
+        Args:
+            probability: If True, enable probability estimates.
+            C: Regularization parameter (default 1.0).
+            gamma: Kernel coefficient (default 'scale').
+            kernel: Kernel type (default 'rbf').
+            cache_size: Kernel cache size in MB (default 200).
+        """
         super().__init__()
         self.probability = probability
         self.C = C
@@ -83,6 +145,7 @@ class SVMClassifier(BaseClassifier):
         self.cache_size = cache_size
 
     def build(self):
+        """Build StandardScaler + SVC pipeline."""
         svc = SVC(probability=self.probability, C=self.C, gamma=self.gamma, kernel=self.kernel, cache_size=self.cache_size, random_state=42)
         self.model = Pipeline([
             ("scaler", StandardScaler()),
@@ -91,7 +154,23 @@ class SVMClassifier(BaseClassifier):
 
     def train_from_csv_with_grid(self, data_path: str, model_filename: str = "best_grasp_classifier_svm.pkl", test_size: float = 0.2, random_state: int = 42,
                                  param_grid: Dict[str, Any] | None = None, cv: int = 5, n_jobs: int = -1, verbose: int = 1) -> Dict[str, Any]:
-        """Replicates main_train_svm.py behavior: load, balance, split, grid search, evaluate, save."""
+        """Train SVM with grid search CV (replicates main_train_svm.py).
+        
+        Loads CSV, balances classes, splits data, performs grid search, evaluates, and saves best model.
+        
+        Args:
+            data_path: Path to CSV file with grasp data.
+            model_filename: Output model filename (default 'best_grasp_classifier_svm.pkl').
+            test_size: Validation split ratio (default 0.2).
+            random_state: Random seed for reproducibility (default 42).
+            param_grid: Hyperparameter grid for GridSearchCV (default covers C, gamma, kernel).
+            cv: Number of cross-validation folds (default 5).
+            n_jobs: Parallel jobs for GridSearchCV (default -1 for all cores).
+            verbose: Verbosity level for GridSearchCV (default 1).
+            
+        Returns:
+            Dictionary with 'val_accuracy', 'best_params', 'cv_score', and 'classification_report'.
+        """
         if param_grid is None:
             param_grid = {
                 'svc__C': [0.1, 1, 10, 100],
@@ -142,9 +221,24 @@ class SVMClassifier(BaseClassifier):
 
 
 class RFClassifier(BaseClassifier):
-    """Random Forest classifier."""
+    """Random Forest classifier.
+    
+    Attributes:
+        n_estimators: Number of trees in the forest.
+        max_depth: Maximum tree depth (None for unlimited).
+        n_jobs: Number of parallel jobs (-1 for all cores).
+        random_state: Random seed for reproducibility.
+    """
 
-    def __init__(self, n_estimators: int = 100, max_depth: Optional[int] = None, n_jobs: int = -1, random_state: int = 42):
+    def __init__(self, n_estimators: int = 100, max_depth: int | None = None, n_jobs: int = -1, random_state: int = 42):
+        """Initialize Random Forest classifier.
+        
+        Args:
+            n_estimators: Number of trees (default 100).
+            max_depth: Maximum tree depth, None for unlimited (default None).
+            n_jobs: Parallel jobs, -1 for all cores (default -1).
+            random_state: Random seed (default 42).
+        """
         super().__init__()
         self.n_estimators = n_estimators
         self.max_depth = max_depth
@@ -152,6 +246,7 @@ class RFClassifier(BaseClassifier):
         self.random_state = random_state
 
     def build(self):
+        """Build RandomForestClassifier with configured parameters."""
         self.model = RandomForestClassifier(
             n_estimators=self.n_estimators,
             max_depth=self.max_depth,
@@ -160,7 +255,19 @@ class RFClassifier(BaseClassifier):
         )
 
     def train_from_csv(self, data_path: str, model_filename: str = "best_grasp_classifier_rf.pkl", test_size: float = 0.2, random_state: int = 42) -> Dict[str, Any]:
-        """Load CSV, split, train RF, evaluate, save. Mirrors main_train.py behavior for RF."""
+        """Train RF from CSV (replicates main_train.py behavior).
+        
+        Loads CSV, splits data, trains Random Forest, evaluates, and saves model.
+        
+        Args:
+            data_path: Path to CSV file with grasp data.
+            model_filename: Output model filename (default 'best_grasp_classifier_rf.pkl').
+            test_size: Validation split ratio (default 0.2).
+            random_state: Random seed (default 42).
+            
+        Returns:
+            Dictionary with 'val_accuracy' and 'classification_report'.
+        """
         if not os.path.exists(data_path):
             raise FileNotFoundError(f"CSV not found: {data_path}")
         df = pd.read_csv(data_path)

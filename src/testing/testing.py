@@ -1,5 +1,5 @@
 """
-OOP version of main_test.py.
+OOP version of main_test.py for live grasp evaluation.
 
 Class Test provides method test_simulation(model_name, num_trials, gui_mode)
 and preserves the original testing logic (sampling, prediction, execution, scoring).
@@ -17,6 +17,12 @@ from src.planning.sampler import GraspSampler
 
 
 class Test:
+    """Grasp classifier live testing framework.
+    
+    Loads trained ML models and evaluates them in PyBullet simulation with random
+    object/gripper combinations. Tracks accuracy, true/false positives/negatives.
+    """
+    
     def __init__(self):
         pass
 
@@ -27,6 +33,12 @@ class Test:
         1) src/learning/<expected_file>.pkl
         2) workspace root <expected_file>.pkl
         3) treat model_name as a direct path
+        
+        Args:
+            model_name: Friendly name ('rf', 'svm') or direct path to .pkl file.
+            
+        Returns:
+            Absolute path to model file.
         """
         name = (model_name or "").lower()
         root = os.getcwd()
@@ -50,6 +62,21 @@ class Test:
         return model_name
 
     def test_simulation(self, model_name: str, num_trials: int, gui_mode: bool):
+        """Run live grasp evaluation with trained classifier.
+        
+        For each trial:
+        1. Randomly selects object (Cube/Duck) and gripper (TwoFinger/FrankaPanda)
+        2. Samples grasp pose with noise
+        3. Predicts success probability using loaded model (threshold=0.7)
+        4. Executes grasp in simulation (approach -> grasp -> lift)
+        5. Checks actual outcome (object height > 0.2m)
+        6. Records true/false positives/negatives
+        
+        Args:
+            model_name: Friendly name ('rf', 'svm') or direct path to .pkl model.
+            num_trials: Number of grasp attempts to evaluate.
+            gui_mode: If True, show PyBullet GUI for visualization.
+        """
         model_path = self._resolve_model_path(model_name)
         if not os.path.exists(model_path):
             print(f"Error: Model file '{model_path}' not found.")

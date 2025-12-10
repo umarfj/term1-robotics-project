@@ -24,9 +24,23 @@ class DataGenerator:
 
     Features per row: [x, y, z, qx, qy, qz, qw, label]
     - label: 1 for success, 0 for fail
+    
+    Attributes:
+        gui_mode: If True, show PyBullet GUI during generation.
+        rng: NumPy random number generator for reproducibility.
+        sim: SimulationManager instance for PyBullet control.
+        sampler: GraspSampler for pose sampling with noise.
+        root: Workspace root directory.
+        data_dir: Output directory for CSV files (data/).
     """
 
     def __init__(self, gui_mode: bool = False, seed: Optional[int] = None):
+        """Initialize data generator.
+        
+        Args:
+            gui_mode: If True, show PyBullet GUI (default False).
+            seed: Random seed for reproducibility, None for non-deterministic (default None).
+        """
         self.gui_mode = gui_mode
         # Use a local RNG to avoid locking global numpy randomness across runs
         # When seed is None, the generator is non-deterministic.
@@ -63,6 +77,13 @@ class DataGenerator:
         """Generate one sample: sample grasp, execute, label and return features+label.
 
         Prints per-attempt outcome to mirror main_generate_data.py style.
+        
+        Args:
+            attempt_idx: Attempt number for logging (optional).
+            
+        Returns:
+            Tuple of (features, label) where features is [x, y, z, qx, qy, qz, qw]
+            and label is 1 (success) or 0 (fail).
         """
         # Random world
         current_obj, _ = self._choose_random_object()
@@ -129,6 +150,13 @@ class DataGenerator:
         """Generate num_samples and save to data/<output_name>.
 
         Prints each attempt's outcome and a final success rate summary.
+        
+        Args:
+            output_name: Output CSV filename (default 'grasp_dataset.csv').
+            num_samples: Number of grasp samples to generate (default 1000).
+            
+        Returns:
+            Path to generated CSV file.
         """
         out_path = os.path.join(self.data_dir, output_name)
 
