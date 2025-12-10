@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+
+# Data files (often large, can regenerate)
+# Uncomment if you don't want to commit datasets
+# data/*.csv
+# *.csv
+
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.bbl
+*.blg
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Misc
+metrics.txt
+misc.py
+misc_svm.py
+report.tex
+final_plots/
+main_generate_data.py
+main_test.py
+main_train_svm.py
+main_train.py
+OOP_courseworkDescription-2.pdf
