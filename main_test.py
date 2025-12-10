@@ -66,7 +66,7 @@ def main():
         # 3. GENERATE CANDIDATE (With Noise)
         grasp_pos, grasp_orn = sampler.sample_grasp_pose(target_pos, radius=0.10)
         approach_pos, _ = sampler.calculate_approach_pose(grasp_pos, grasp_orn, distance=0.1)
-
+ 
         # 4. PREDICT (Ask the AI)
         # We must format the input exactly like training: [x, y, z, qx, qy, qz, qw]
         features = [
@@ -79,7 +79,7 @@ def main():
         success_probability = probs[1] # The probability of class 1
 
         # Only predict Success if the model is VERY confident (> 70%)
-        if success_probability > 0.75:
+        if success_probability > 0.7:
             prediction = 1
         else:
             prediction = 0        

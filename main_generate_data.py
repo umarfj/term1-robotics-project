@@ -13,10 +13,10 @@ from src.hardware.gripper import TwoFinger, ThreeFinger, FrankaPanda
 from src.planning.sampler import GraspSampler
 
 # --- CONFIGURATION ---
-NUM_SAMPLES = 30000      # 10 for dry-run
+NUM_SAMPLES = 100     # 10 for dry-run
 GUI_MODE = False
 DATA_DIR = "data"
-FILENAME = "grasp_dataset.csv"
+FILENAME = "grasp_dataset_test.csv"
 
 def interpolate_pose(start_pos, end_pos, steps=50):
     path = []
